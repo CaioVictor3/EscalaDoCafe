@@ -1,45 +1,73 @@
-# Escala de Café ☕
+# React + TypeScript + Vite
 
-> Um gerador inteligente para criar escalas de café mensais de forma automática, justa e personalizável.
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-## 🚀 Acesso Rápido
+Currently, two official plugins are available:
 
-A aplicação está online e pronta para uso\! Acesse através do link abaixo:
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-**[👉 Acessar a Escala de Café Online](https://escaladocafe.netlify.app/)**
+## React Compiler
 
-## 📄 Descrição
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-Este projeto é uma aplicação web desenvolvida para automatizar e simplificar a criação da escala de café do mês. A ferramenta permite adicionar uma lista de participantes e gera uma escala equilibrada, considerando apenas os dias úteis.
+## Expanding the ESLint configuration
 
-O sistema foi atualizado com funcionalidades avançadas, como a detecção automática de feriados nacionais e a edição manual dos dias, tornando a organização mais flexível e precisa.
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
 
-## ✨ Funcionalidades Principais
+```js
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
 
-  * **Geração Automática:** Crie uma escala para o mês inteiro com apenas um clique.
-  * **Adicionar e Remover Pessoas:** Gerencie a lista de participantes de forma simples e rápida.
-  * **Detecção de Feriados:** A escala ignora automaticamente os feriados nacionais do ano selecionado (utilizando a BrasilAPI).
-  * **Ordem Alfabética Contínua:** Um modo inteligente que memoriza o último escalado do mês anterior para promover uma rotação mais justa.
-  * **Edição Manual:** Modifique facilmente os nomes atribuídos a um dia específico para ajustar folgas ou imprevistos.
-  * **Exportação para PDF:** Salve e compartilhe a escala gerada em um arquivo PDF com layout otimizado.
+      // Remove tseslint.configs.recommended and replace with this
+      tseslint.configs.recommendedTypeChecked,
+      // Alternatively, use this for stricter rules
+      tseslint.configs.strictTypeChecked,
+      // Optionally, add this for stylistic rules
+      tseslint.configs.stylisticTypeChecked,
 
-## 💻 Como Executar Localmente (para Desenvolvimento)
+      // Other configs...
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
+```
 
-Se você deseja contribuir com o projeto ou fazer suas próprias modificações, siga os passos abaixo para executar a aplicação em seu ambiente local.
+You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
 
-1.  Certifique-se de ter o **Visual Studio Code** instalado.
-2.  No VS Code, vá até a aba de **Extensões** e instale a extensão `Live Server`.
-3.  Clone ou baixe este repositório para a sua máquina.
-4.  Abra a pasta do projeto no VS Code.
-5.  Clique com o botão direito no arquivo `index.html` e selecione a opção **"Open with Live Server"**.
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
 
-O site será aberto em um servidor local no seu navegador.
-
-## 🛠️ Tecnologias Utilizadas
-
-  * **HTML5:** Estruturação do conteúdo da página.
-  * **CSS3:** Estilização e design.
-  * **JavaScript (ES6+):** Lógica de programação, manipulação do DOM e interatividade.
-  * **Bootstrap 5:** Framework CSS para criação de um layout responsivo e moderno.
-  * **html2pdf.js:** Biblioteca para a funcionalidade de exportação para PDF.
-  * **BrasilAPI:** API pública para consulta de feriados nacionais.
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+      // Enable lint rules for React
+      reactX.configs['recommended-typescript'],
+      // Enable lint rules for React DOM
+      reactDom.configs.recommended,
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
+```
