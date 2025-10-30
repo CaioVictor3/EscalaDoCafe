@@ -9,6 +9,7 @@ export const useScheduleGenerator = () => {
   const { state, dispatch } = useApp();
 
   const generateSchedule = useCallback(async () => {
+    
     if (state.people.length < 2) {
       alert('Adicione ao menos 2 pessoas para gerar a escala.');
       return;
@@ -41,7 +42,6 @@ export const useScheduleGenerator = () => {
     let assignmentList = state.people.map(p => p.name);
     let personIndex = 0;
     const periodStr = `${state.selectedYear}-${String(state.selectedMonth + 1).padStart(2, '0')}`;
-    const storageKey = STORAGE_KEYS.ALPHA_CONTINUOUS_LAST_PERSON;
     const monthKey = STORAGE_KEYS.ALPHA_SCHEDULE(periodStr);
     const monthPeopleKey = STORAGE_KEYS.ALPHA_SCHEDULE_PEOPLE(periodStr);
 
@@ -49,46 +49,16 @@ export const useScheduleGenerator = () => {
       // Ordena alfabeticamente
       assignmentList.sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }));
 
-      // Verifica se já existe escala salva para o mês
-      const savedScheduleJson = localStorage.getItem(monthKey);
-      const savedPeopleJson = localStorage.getItem(monthPeopleKey);
-      const currentPeopleSorted = [...state.people.map(p => p.name)].sort((a, b) => 
-        a.localeCompare(b, 'pt-BR', { sensitivity: 'base' })
-      );
-      const savedPeople = savedPeopleJson ? JSON.parse(savedPeopleJson) : null;
-
-      if (savedScheduleJson && savedPeople && Array.isArray(savedPeople)) {
-        const savedSorted = [...savedPeople].sort((a, b) => 
-          a.localeCompare(b, 'pt-BR', { sensitivity: 'base' })
-        );
-        const sameList = savedSorted.length === currentPeopleSorted.length && 
-          savedSorted.every((n, i) => n === currentPeopleSorted[i]);
-        
-        if (sameList) {
-          // Carrega a escala existente
-          const savedCalendar = JSON.parse(savedScheduleJson);
-          dispatch({ type: 'SET_CALENDAR', payload: savedCalendar });
-          dispatch({ type: 'SET_MESSAGES', payload: ['A escala para este mês já foi criada anteriormente em ordem alfabética. Exibindo a escala existente.'] });
-          return;
-        } else {
-          dispatch({ type: 'SET_MESSAGES', payload: ['A lista de participantes foi alterada. Gerando uma nova escala em ordem alfabética para este mês.'] });
-        }
-      }
-
-      // Lógica de continuidade inteligente
-      const lastPerson = localStorage.getItem(storageKey);
-      const lastPeriod = localStorage.getItem(STORAGE_KEYS.ALPHA_CONTINUOUS_LAST_PERIOD);
-      
-      if (lastPerson && lastPeriod) {
-        // Verifica se a última pessoa ainda está na lista
+      // Continuidade baseada no índice por mês
+      const prevMonthNum = state.selectedMonth === 0 ? 12 : state.selectedMonth; // 1..12
+      const lastPerson = state.lastPersonIndex[prevMonthNum];
+      if (lastPerson) {
         if (assignmentList.includes(lastPerson)) {
-          // Encontra a posição da última pessoa e inicia com a próxima
           const lastIdx = assignmentList.indexOf(lastPerson);
           const startIdx = (lastIdx + 1) % assignmentList.length;
           assignmentList = assignmentList.slice(startIdx).concat(assignmentList.slice(0, startIdx));
         } else {
-          // Se a pessoa não está mais na lista, inicia do início
-          console.log(`Pessoa anterior (${lastPerson}) não está mais na lista. Iniciando do início.`);
+          // Se a última pessoa não estiver mais na lista, começa do início
         }
       }
     } else {
@@ -132,45 +102,28 @@ export const useScheduleGenerator = () => {
     if (state.alphaContinuous) {
       // Encontra a última pessoa escalada no mês
       let lastAssignedPerson = '';
-      let lastAssignedDay = 0;
-      
-      // Percorre o calendário para encontrar a última pessoa escalada
       for (let i = calendar.length - 1; i >= 0; i--) {
         const day = calendar[i];
-        if (day.afternoonPerson) {
-          lastAssignedPerson = day.afternoonPerson;
-          lastAssignedDay = day.day;
-          break;
-        } else if (day.morningPerson) {
-          lastAssignedPerson = day.morningPerson;
-          lastAssignedDay = day.day;
-          break;
-        }
+        if (day.afternoonPerson) { lastAssignedPerson = day.afternoonPerson; break; }
+        if (day.morningPerson) { lastAssignedPerson = day.morningPerson; break; }
       }
-      
-      const periodKey = STORAGE_KEYS.ALPHA_CONTINUOUS_LAST_PERIOD;
-      
+
+      if (lastAssignedPerson) {
+        dispatch({
+          type: 'SET_LAST_PERSON_INDEX',
+          payload: { month: state.selectedMonth + 1, person: lastAssignedPerson },
+        });
+      }
+
       try {
-        // Salva a última pessoa escalada para continuidade
-        if (lastAssignedPerson) {
-          localStorage.setItem(storageKey, lastAssignedPerson);
-          localStorage.setItem(periodKey, periodStr);
-          console.log(`Salvando última pessoa escalada: ${lastAssignedPerson} (dia ${lastAssignedDay})`);
-        }
-        
-        // Salva a escala do mês
+        // Salva a escala do mês e as pessoas usadas
         localStorage.setItem(monthKey, JSON.stringify(calendar));
         localStorage.setItem(monthPeopleKey, JSON.stringify(assignmentList));
-        
-        if (state.messages.length === 0) {
-          const message = lastAssignedPerson 
-            ? `Escala em ordem alfabética gerada com sucesso! Última pessoa escalada: ${lastAssignedPerson}`
-            : 'Escala em ordem alfabética gerada com sucesso!';
-          dispatch({ type: 'SET_MESSAGES', payload: [message] });
-        }
       } catch (e) {
         console.warn('Falha ao salvar informações no localStorage:', e);
       }
+
+      dispatch({ type: 'SET_MESSAGES', payload: ['Escala em ordem alfabética gerada com sucesso!'] });
     }
   }, [state.people, state.selectedMonth, state.selectedYear, state.alphaContinuous, state.messages.length, dispatch]);
 

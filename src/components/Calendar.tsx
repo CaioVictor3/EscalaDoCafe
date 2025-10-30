@@ -8,6 +8,7 @@ const Calendar: React.FC = () => {
     day: number;
     morningPerson: string;
     afternoonPerson: string;
+    isLastDayOfMonth: boolean;
   } | null>(null);
 
   const monthNames = [
@@ -16,6 +17,13 @@ const Calendar: React.FC = () => {
   ];
 
   const daysOfWeek = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+
+  const getLastDayWithAssignment = () => {
+    const daysWithAssignments = state.calendar
+      .filter(day => day.morningPerson || day.afternoonPerson)
+      .map(day => day.day);
+    return Math.max(...daysWithAssignments);
+  };
 
   const handleEditDay = (day: number, morningPerson: string, afternoonPerson: string) => {
     const today = new Date();
@@ -35,7 +43,13 @@ const Calendar: React.FC = () => {
       return;
     }
 
-    setEditModalData({ day, morningPerson, afternoonPerson });
+    const lastDay = getLastDayWithAssignment();
+    setEditModalData({ 
+      day, 
+      morningPerson, 
+      afternoonPerson,
+      isLastDayOfMonth: day === lastDay
+    });
   };
 
   const handleSaveChanges = (day: number, morningPerson: string, afternoonPerson: string) => {
@@ -211,6 +225,7 @@ const Calendar: React.FC = () => {
           afternoonPerson={editModalData.afternoonPerson}
           onSave={handleSaveChanges}
           onClose={() => setEditModalData(null)}
+          isLastDayOfMonth={editModalData.isLastDayOfMonth}
         />
       )}
     </>

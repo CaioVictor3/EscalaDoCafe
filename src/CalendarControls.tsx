@@ -126,6 +126,8 @@ const CalendarControls: React.FC = () => {
         </div>
       </div>
 
+      {/* Área de ações removida conforme solicitação (Salvar externo) */}
+
       {/* Modal Informativo */}
       {showInfoModal && (
         <div className="modal fade show" style={{ display: 'block' }} tabIndex={-1}>

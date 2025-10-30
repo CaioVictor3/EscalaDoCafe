@@ -252,6 +252,24 @@ body {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
+/* Botão Exportar PDF com visual moderno e consistente */
+.btn-export {
+  background: linear-gradient(135deg, #5b8def 0%, #3a6ee8 100%);
+  border: none;
+  color: #fff;
+  border-radius: 0.5rem;
+}
+
+.btn-export:hover {
+  filter: brightness(1.05);
+  box-shadow: 0 6px 14px rgba(58, 110, 232, 0.3);
+}
+
+.btn-export:disabled {
+  background: #a7b6e8;
+  box-shadow: none;
+}
+
 /* Corrigir problemas com o modal */
 .modal {
   z-index: 1055;

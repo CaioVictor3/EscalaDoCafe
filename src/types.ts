@@ -26,6 +26,9 @@ export interface AppState {
   alphaContinuous: boolean;
   calendar: CalendarDay[];
   messages: string[];
+  lastPersonIndex: { [monthNumber: number]: string };
+  hasUnsavedChanges: boolean;
+  canGenerateSchedule: boolean;
 }
 
 export type AppAction =
@@ -38,6 +41,9 @@ export type AppAction =
   | { type: 'SET_CALENDAR'; payload: CalendarDay[] }
   | { type: 'SET_MESSAGES'; payload: string[] }
   | { type: 'UPDATE_DAY'; payload: { day: number; morningPerson: string; afternoonPerson: string } }
+  | { type: 'SET_LAST_PERSON_INDEX'; payload: { month: number; person: string } }
+  | { type: 'SET_HAS_UNSAVED_CHANGES'; payload: boolean }
+  | { type: 'SET_CAN_GENERATE_SCHEDULE'; payload: boolean }
   | { type: 'LOAD_FROM_STORAGE' };
 
 export interface EditModalProps {

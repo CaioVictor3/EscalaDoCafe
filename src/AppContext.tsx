@@ -10,7 +10,15 @@ const initialState: AppState = {
   alphaContinuous: false,
   calendar: [],
   messages: [],
+  lastPersonIndex: {},
+  hasUnsavedChanges: false,
+  canGenerateSchedule: true,
 };
+
+function loadLastPersonIndex(): { [key: number]: string } {
+  const savedIndex = localStorage.getItem('lastPersonIndex');
+  return savedIndex ? JSON.parse(savedIndex) : {};
+}
 
 function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
@@ -22,12 +30,14 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         people: [...state.people, newPerson],
+        hasUnsavedChanges: true,
       };
 
     case 'REMOVE_PERSON':
       return {
         ...state,
         people: state.people.filter(person => person.id !== action.payload),
+        hasUnsavedChanges: true,
       };
 
     case 'SET_MONTH':
@@ -58,6 +68,8 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         calendar: action.payload,
+        hasUnsavedChanges: true,
+        canGenerateSchedule: false,
       };
 
     case 'SET_MESSAGES':
@@ -66,22 +78,75 @@ function appReducer(state: AppState, action: AppAction): AppState {
         messages: action.payload,
       };
 
-    case 'UPDATE_DAY':
+    case 'UPDATE_DAY': {
+      const updatedCalendar = state.calendar.map(day =>
+        day.day === action.payload.day
+          ? {
+              ...day,
+              morningPerson: action.payload.morningPerson,
+              afternoonPerson: action.payload.afternoonPerson,
+            }
+          : day
+      );
+
+      // Determine the last assigned person for this month after update
+      let lastAssignedPerson = '';
+      for (let i = updatedCalendar.length - 1; i >= 0; i--) {
+        const d = updatedCalendar[i];
+        if (d.afternoonPerson) { lastAssignedPerson = d.afternoonPerson; break; }
+        if (d.morningPerson) { lastAssignedPerson = d.morningPerson; break; }
+      }
+
+      let newLastPersonIndex = state.lastPersonIndex;
+      if (lastAssignedPerson) {
+        newLastPersonIndex = {
+          ...state.lastPersonIndex,
+          [state.selectedMonth + 1]: lastAssignedPerson,
+        };
+        localStorage.setItem('lastPersonIndex', JSON.stringify(newLastPersonIndex));
+      }
+
+      // Persistir a escala do mês e a lista de pessoas automaticamente ao salvar no modal
+      try {
+        const periodStr = `${state.selectedYear}-${String(state.selectedMonth + 1).padStart(2, '0')}`;
+        const monthKey = `alphaSchedule_${periodStr}`;
+        const monthPeopleKey = `alphaSchedule_people_${periodStr}`;
+        localStorage.setItem(monthKey, JSON.stringify(updatedCalendar));
+        localStorage.setItem(monthPeopleKey, JSON.stringify(state.people.map(p => p.name)));
+      } catch (e) {
+        console.warn('Falha ao salvar a escala no localStorage após edição:', e);
+      }
+
       return {
         ...state,
-        calendar: state.calendar.map(day =>
-          day.day === action.payload.day
-            ? {
-                ...day,
-                morningPerson: action.payload.morningPerson,
-                afternoonPerson: action.payload.afternoonPerson,
-              }
-            : day
-        ),
+        calendar: updatedCalendar,
+        lastPersonIndex: newLastPersonIndex,
+        hasUnsavedChanges: false,
+        canGenerateSchedule: true,
       };
+    }
+
+    case 'SET_LAST_PERSON_INDEX': {
+      const newIndex = {
+        ...state.lastPersonIndex,
+        [action.payload.month]: action.payload.person,
+      };
+      localStorage.setItem('lastPersonIndex', JSON.stringify(newIndex));
+      return {
+        ...state,
+        lastPersonIndex: newIndex,
+      };
+    }
+
+    case 'SET_HAS_UNSAVED_CHANGES':
+      return { ...state, hasUnsavedChanges: action.payload };
+
+    case 'SET_CAN_GENERATE_SCHEDULE':
+      return { ...state, canGenerateSchedule: action.payload };
 
     case 'LOAD_FROM_STORAGE':
       const savedPeople = localStorage.getItem('people');
+      const lastPersonIndex = loadLastPersonIndex();
       if (savedPeople) {
         const parsedPeople = JSON.parse(savedPeople).map((name: string, index: number) => ({
           id: index.toString(),
@@ -90,9 +155,10 @@ function appReducer(state: AppState, action: AppAction): AppState {
         return {
           ...state,
           people: parsedPeople,
+          lastPersonIndex,
         };
       }
-      return state;
+      return { ...state, lastPersonIndex };
 
     default:
       return state;

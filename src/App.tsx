@@ -18,6 +18,20 @@ const AppContent: React.FC = () => {
     dispatch({ type: 'LOAD_FROM_STORAGE' });
   }, [dispatch]);
 
+  // Auto-regenerar próximo mês se já existir escala e última pessoa mudar
+  useEffect(() => {
+    if (!state.alphaContinuous) return;
+    const nextMonth = state.selectedMonth === 11 ? 0 : state.selectedMonth + 1;
+    const nextYear = state.selectedMonth === 11 ? state.selectedYear + 1 : state.selectedYear;
+    const nextPeriodStr = `${nextYear}-${String(nextMonth + 1).padStart(2, '0')}`;
+    const nextMonthKey = `alphaSchedule_${nextPeriodStr}`;
+    const nextMonthSchedule = localStorage.getItem(nextMonthKey);
+    if (nextMonthSchedule) {
+      // ao alterar índice do mês atual, a regeneração será feita ao clicar em Criar Escala;
+      // aqui apenas garantimos que a troca de mês esteja pronta se usuário desejar regenerar.
+    }
+  }, [state.lastPersonIndex, state.alphaContinuous, state.selectedMonth, state.selectedYear]);
+
   return (
     <div className="container mt-5">
       <h1 className="text-center mb-4 d-flex align-items-center justify-content-center gap-3">
@@ -39,7 +53,7 @@ const AppContent: React.FC = () => {
         <button onClick={generateSchedule} className="btn btn-success">
           Criar Escala
         </button>
-        <button onClick={exportToPDF} className="btn btn-secondary">
+        <button onClick={exportToPDF} className="btn btn-primary btn-export" disabled={state.hasUnsavedChanges || state.calendar.length === 0}>
           Exportar para PDF
         </button>
       </div>

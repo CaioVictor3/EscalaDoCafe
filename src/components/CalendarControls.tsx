@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../contexts/AppContext';
+// SaveScheduleButton removido; salvamento agora é automático via modal
 
 const CalendarControls: React.FC = () => {
   const { state, dispatch } = useApp();
@@ -115,6 +116,8 @@ const CalendarControls: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Área de ações com botão salvar/alerta removida */}
 
       {/* Modal Informativo */}
       {showInfoModal && (

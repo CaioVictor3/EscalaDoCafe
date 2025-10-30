@@ -10,6 +10,10 @@ export const usePDFExport = () => {
       alert('Nenhuma escala gerada para exportar.');
       return;
     }
+    if (state.hasUnsavedChanges) {
+      alert('Salve a escala antes de exportar para PDF.');
+      return;
+    }
 
     const monthName = MONTH_NAMES[state.selectedMonth];
     const filename = `Escala do café - ${monthName} ${state.selectedYear}.pdf`;
