@@ -32,8 +32,14 @@ export const useScheduleGenerator = () => {
     }
 
     // Buscar feriados
-    const holidays = await HolidayService.fetchHolidays(state.selectedYear);
-    dispatch({ type: 'SET_HOLIDAYS', payload: holidays });
+    let holidays = [];
+    try {
+      holidays = await HolidayService.fetchHolidays(state.selectedYear);
+      dispatch({ type: 'SET_HOLIDAYS', payload: holidays });
+    } catch (error) {
+      console.error("Falha ao buscar feriados, a escala será gerada sem eles.", error);
+      dispatch({ type: 'SET_HOLIDAYS', payload: [] });
+    }
 
     const daysInMonth = new Date(state.selectedYear, state.selectedMonth + 1, 0).getDate();
     const calendar: CalendarDay[] = [];

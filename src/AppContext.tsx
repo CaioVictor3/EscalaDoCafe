@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useReducer } from 'react';
 import type { ReactNode } from 'react';
 import type { AppState, AppAction } from './types';
+import { STORAGE_KEYS } from './constants';
 
 const initialState: AppState = {
   people: [],
@@ -16,7 +17,7 @@ const initialState: AppState = {
 };
 
 function loadLastPersonIndex(): { [key: number]: string } {
-  const savedIndex = localStorage.getItem('lastPersonIndex');
+  const savedIndex = localStorage.getItem(STORAGE_KEYS.ALPHA_CONTINUOUS_LAST_PERSON);
   return savedIndex ? JSON.parse(savedIndex) : {};
 }
 
@@ -103,16 +104,26 @@ function appReducer(state: AppState, action: AppAction): AppState {
           ...state.lastPersonIndex,
           [state.selectedMonth + 1]: lastAssignedPerson,
         };
-        localStorage.setItem('lastPersonIndex', JSON.stringify(newLastPersonIndex));
+        localStorage.setItem(STORAGE_KEYS.ALPHA_CONTINUOUS_LAST_PERSON, JSON.stringify(newLastPersonIndex));
       }
 
       // Persistir a escala do mês e a lista de pessoas automaticamente ao salvar no modal
       try {
         const periodStr = `${state.selectedYear}-${String(state.selectedMonth + 1).padStart(2, '0')}`;
-        const monthKey = `alphaSchedule_${periodStr}`;
-        const monthPeopleKey = `alphaSchedule_people_${periodStr}`;
+        const monthKey = STORAGE_KEYS.ALPHA_SCHEDULE(periodStr);
+        const monthPeopleKey = STORAGE_KEYS.ALPHA_SCHEDULE_PEOPLE(periodStr);
+
+        // Mantém a lista de pessoas original da escala
+        const storedPeople = localStorage.getItem(monthPeopleKey);
+
         localStorage.setItem(monthKey, JSON.stringify(updatedCalendar));
-        localStorage.setItem(monthPeopleKey, JSON.stringify(state.people.map(p => p.name)));
+
+        if (storedPeople) {
+          localStorage.setItem(monthPeopleKey, storedPeople);
+        } else {
+          // Fallback para a lista atual se não houver uma salva
+          localStorage.setItem(monthPeopleKey, JSON.stringify(state.people.map(p => p.name)));
+        }
       } catch (e) {
         console.warn('Falha ao salvar a escala no localStorage após edição:', e);
       }
@@ -131,7 +142,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ...state.lastPersonIndex,
         [action.payload.month]: action.payload.person,
       };
-      localStorage.setItem('lastPersonIndex', JSON.stringify(newIndex));
+      localStorage.setItem(STORAGE_KEYS.ALPHA_CONTINUOUS_LAST_PERSON, JSON.stringify(newIndex));
       return {
         ...state,
         lastPersonIndex: newIndex,
@@ -144,8 +155,28 @@ function appReducer(state: AppState, action: AppAction): AppState {
     case 'SET_CAN_GENERATE_SCHEDULE':
       return { ...state, canGenerateSchedule: action.payload };
 
+    case 'LOAD_SCHEDULE_FROM_STORAGE': {
+      const { year, month } = action.payload;
+      const periodStr = `${year}-${String(month + 1).padStart(2, '0')}`;
+      const monthKey = STORAGE_KEYS.ALPHA_SCHEDULE(periodStr);
+      const savedCalendar = localStorage.getItem(monthKey);
+
+      if (savedCalendar) {
+        return {
+          ...state,
+          calendar: JSON.parse(savedCalendar),
+          canGenerateSchedule: false,
+        };
+      }
+      return {
+        ...state,
+        calendar: [],
+        canGenerateSchedule: true,
+      };
+    }
+
     case 'LOAD_FROM_STORAGE':
-      const savedPeople = localStorage.getItem('people');
+      const savedPeople = localStorage.getItem(STORAGE_KEYS.PEOPLE);
       const lastPersonIndex = loadLastPersonIndex();
       if (savedPeople) {
         const parsedPeople = JSON.parse(savedPeople).map((name: string, index: number) => ({
@@ -177,7 +208,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   React.useEffect(() => {
     if (state.people.length > 0) {
       const peopleNames = state.people.map(person => person.name);
-      localStorage.setItem('people', JSON.stringify(peopleNames));
+      localStorage.setItem(STORAGE_KEYS.PEOPLE, JSON.stringify(peopleNames));
     }
   }, [state.people]);
 

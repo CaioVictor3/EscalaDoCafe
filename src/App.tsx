@@ -13,24 +13,15 @@ const AppContent: React.FC = () => {
   const { generateSchedule } = useScheduleGenerator();
   const { exportToPDF } = usePDFExport();
 
-  // Carregar dados do localStorage na inicialização
+  // Carregar dados do localStorage na inicialização e ao mudar de mês/ano
   useEffect(() => {
     dispatch({ type: 'LOAD_FROM_STORAGE' });
-  }, [dispatch]);
+    dispatch({
+      type: 'LOAD_SCHEDULE_FROM_STORAGE',
+      payload: { year: state.selectedYear, month: state.selectedMonth },
+    });
+  }, [state.selectedMonth, state.selectedYear, dispatch]);
 
-  // Auto-regenerar próximo mês se já existir escala e última pessoa mudar
-  useEffect(() => {
-    if (!state.alphaContinuous) return;
-    const nextMonth = state.selectedMonth === 11 ? 0 : state.selectedMonth + 1;
-    const nextYear = state.selectedMonth === 11 ? state.selectedYear + 1 : state.selectedYear;
-    const nextPeriodStr = `${nextYear}-${String(nextMonth + 1).padStart(2, '0')}`;
-    const nextMonthKey = `alphaSchedule_${nextPeriodStr}`;
-    const nextMonthSchedule = localStorage.getItem(nextMonthKey);
-    if (nextMonthSchedule) {
-      // ao alterar índice do mês atual, a regeneração será feita ao clicar em Criar Escala;
-      // aqui apenas garantimos que a troca de mês esteja pronta se usuário desejar regenerar.
-    }
-  }, [state.lastPersonIndex, state.alphaContinuous, state.selectedMonth, state.selectedYear]);
 
   return (
     <div className="container mt-5">
