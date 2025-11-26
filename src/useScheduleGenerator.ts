@@ -4,7 +4,6 @@ import type { CalendarDay, Holiday } from './types';
 import { HolidayService } from './services';
 import { ScheduleService } from './services/api';
 import { shuffleArray, formatDate } from './utils';
-import { STORAGE_KEYS } from './constants';
 
 export const useScheduleGenerator = () => {
   const { state, dispatch } = useApp();
