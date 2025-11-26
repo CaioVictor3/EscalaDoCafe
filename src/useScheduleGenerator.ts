@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { useApp } from './AppContext';
 import type { CalendarDay, Holiday } from './types';
 import { HolidayService } from './services';
+import { ScheduleService } from './services/api';
 import { shuffleArray, formatDate } from './utils';
 import { STORAGE_KEYS } from './constants';
 
@@ -104,16 +105,8 @@ export const useScheduleGenerator = () => {
 
     dispatch({ type: 'SET_CALENDAR', payload: calendar });
 
-    // Salvar automaticamente no localStorage sempre que a escala for gerada
-    try {
-      // Salva a escala do mês e as pessoas usadas
-      localStorage.setItem(monthKey, JSON.stringify(calendar));
-      localStorage.setItem(monthPeopleKey, JSON.stringify(assignmentList));
-    } catch (e) {
-      console.warn('Falha ao salvar informações no localStorage:', e);
-    }
-
-    // Se modo contínuo alfabético estiver ativo, atualizar índice
+    // Determinar lastPersonIndex se modo contínuo alfabético estiver ativo
+    let lastPersonIndex: any = null;
     if (state.alphaContinuous) {
       // Encontra a última pessoa escalada no mês
       let lastAssignedPerson = '';
@@ -124,6 +117,9 @@ export const useScheduleGenerator = () => {
       }
 
       if (lastAssignedPerson) {
+        lastPersonIndex = {
+          [state.selectedMonth + 1]: lastAssignedPerson,
+        };
         dispatch({
           type: 'SET_LAST_PERSON_INDEX',
           payload: { month: state.selectedMonth + 1, person: lastAssignedPerson },
@@ -131,6 +127,18 @@ export const useScheduleGenerator = () => {
       }
 
       dispatch({ type: 'SET_MESSAGES', payload: ['Escala em ordem alfabética gerada com sucesso!'] });
+    }
+
+    // Salvar automaticamente no banco de dados
+    try {
+      await ScheduleService.save(
+        state.selectedYear,
+        state.selectedMonth + 1,
+        calendar,
+        lastPersonIndex
+      );
+    } catch (e) {
+      console.warn('Falha ao salvar escala no banco de dados:', e);
     }
   }, [state.people, state.selectedMonth, state.selectedYear, state.alphaContinuous, state.messages.length, dispatch]);
 

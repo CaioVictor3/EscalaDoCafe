@@ -1,7 +1,9 @@
-import React, { createContext, useContext, useReducer } from 'react';
+import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import type { AppState, AppAction } from './types';
 import { STORAGE_KEYS } from './constants';
+import { PeopleService, ScheduleService } from './services/api';
+import { useAuth } from './contexts/AuthContext';
 
 const initialState: AppState = {
   people: [],
@@ -24,22 +26,20 @@ function loadLastPersonIndex(): { [key: number]: string } {
 function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
     case 'ADD_PERSON':
-      const newPerson = {
-        id: Date.now().toString(),
-        name: action.payload,
-      };
+      // A pessoa será adicionada via API, então apenas retornamos o estado atual
+      // O estado será atualizado quando a API retornar sucesso
+      return state;
+
+    case 'SET_PEOPLE':
       return {
         ...state,
-        people: [...state.people, newPerson],
-        hasUnsavedChanges: false,
+        people: action.payload,
       };
 
     case 'REMOVE_PERSON':
-      return {
-        ...state,
-        people: state.people.filter(person => person.id !== action.payload),
-        hasUnsavedChanges: false,
-      };
+      // A pessoa será removida via API, então apenas retornamos o estado atual
+      // O estado será atualizado quando a API retornar sucesso
+      return state;
 
     case 'SET_MONTH':
       return {
@@ -107,25 +107,19 @@ function appReducer(state: AppState, action: AppAction): AppState {
         localStorage.setItem(STORAGE_KEYS.ALPHA_CONTINUOUS_LAST_PERSON, JSON.stringify(newLastPersonIndex));
       }
 
-      // Persistir a escala do mês e a lista de pessoas automaticamente ao salvar no modal
+      // Persistir a escala no banco de dados automaticamente ao salvar no modal
       try {
-        const periodStr = `${state.selectedYear}-${String(state.selectedMonth + 1).padStart(2, '0')}`;
-        const monthKey = STORAGE_KEYS.ALPHA_SCHEDULE(periodStr);
-        const monthPeopleKey = STORAGE_KEYS.ALPHA_SCHEDULE_PEOPLE(periodStr);
-
-        // Mantém a lista de pessoas original da escala
-        const storedPeople = localStorage.getItem(monthPeopleKey);
-
-        localStorage.setItem(monthKey, JSON.stringify(updatedCalendar));
-
-        if (storedPeople) {
-          localStorage.setItem(monthPeopleKey, storedPeople);
-        } else {
-          // Fallback para a lista atual se não houver uma salva
-          localStorage.setItem(monthPeopleKey, JSON.stringify(state.people.map(p => p.name)));
-        }
+        const lastPersonIndex = newLastPersonIndex;
+        ScheduleService.save(
+          state.selectedYear,
+          state.selectedMonth + 1,
+          updatedCalendar,
+          lastPersonIndex
+        ).catch((e) => {
+          console.warn('Falha ao salvar a escala no banco após edição:', e);
+        });
       } catch (e) {
-        console.warn('Falha ao salvar a escala no localStorage após edição:', e);
+        console.warn('Erro ao salvar escala:', e);
       }
 
       return {
@@ -156,39 +150,23 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, canGenerateSchedule: action.payload };
 
     case 'LOAD_SCHEDULE_FROM_STORAGE': {
-      const { year, month } = action.payload;
-      const periodStr = `${year}-${String(month + 1).padStart(2, '0')}`;
-      const monthKey = STORAGE_KEYS.ALPHA_SCHEDULE(periodStr);
-      const savedCalendar = localStorage.getItem(monthKey);
+      // A escala será carregada via API, então apenas retornamos o estado atual
+      // O estado será atualizado quando a API retornar
+      return state;
+    }
 
-      if (savedCalendar) {
-        return {
-          ...state,
-          calendar: JSON.parse(savedCalendar),
-          canGenerateSchedule: false,
-        };
-      }
+    case 'SET_SCHEDULE_FROM_DB': {
       return {
         ...state,
-        calendar: [],
-        canGenerateSchedule: true,
+        calendar: action.payload.calendar || [],
+        lastPersonIndex: action.payload.lastPersonIndex || {},
+        canGenerateSchedule: !action.payload.calendar || action.payload.calendar.length === 0,
       };
     }
 
     case 'LOAD_FROM_STORAGE':
-      const savedPeople = localStorage.getItem(STORAGE_KEYS.PEOPLE);
+      // Não faz mais nada, pois pessoas são carregadas do banco
       const lastPersonIndex = loadLastPersonIndex();
-      if (savedPeople) {
-        const parsedPeople = JSON.parse(savedPeople).map((name: string, index: number) => ({
-          id: index.toString(),
-          name,
-        }));
-        return {
-          ...state,
-          people: parsedPeople,
-          lastPersonIndex,
-        };
-      }
       return { ...state, lastPersonIndex };
 
     default:
@@ -203,17 +181,47 @@ const AppContext = createContext<{
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
+  const { isAuthenticated } = useAuth();
 
-  // Salvar pessoas no localStorage sempre que a lista mudar
-  React.useEffect(() => {
-    if (state.people.length > 0) {
-      const peopleNames = state.people.map(person => person.name);
-      localStorage.setItem(STORAGE_KEYS.PEOPLE, JSON.stringify(peopleNames));
+  // Carregar pessoas do banco de dados quando autenticado
+  useEffect(() => {
+    if (isAuthenticated) {
+      PeopleService.getAll()
+        .then((people) => {
+          dispatch({ type: 'SET_PEOPLE', payload: people });
+        })
+        .catch((error) => {
+          console.error('Erro ao carregar pessoas:', error);
+        });
+    } else {
+      // Limpar pessoas quando deslogar
+      dispatch({ type: 'SET_PEOPLE', payload: [] });
     }
-  }, [state.people]);
+  }, [isAuthenticated]);
+
+  // Interceptar ações para fazer chamadas à API
+  const enhancedDispatch = async (action: AppAction) => {
+    if (action.type === 'ADD_PERSON' && isAuthenticated) {
+      try {
+        const newPerson = await PeopleService.add(action.payload);
+        dispatch({ type: 'SET_PEOPLE', payload: [...state.people, newPerson] });
+      } catch (error: any) {
+        alert(error.message || 'Erro ao adicionar pessoa');
+      }
+    } else if (action.type === 'REMOVE_PERSON' && isAuthenticated) {
+      try {
+        await PeopleService.remove(action.payload);
+        dispatch({ type: 'SET_PEOPLE', payload: state.people.filter(p => p.id !== action.payload) });
+      } catch (error: any) {
+        alert(error.message || 'Erro ao remover pessoa');
+      }
+    } else {
+      dispatch(action);
+    }
+  };
 
   return (
-    <AppContext.Provider value={{ state, dispatch }}>
+    <AppContext.Provider value={{ state, dispatch: enhancedDispatch as React.Dispatch<AppAction> }}>
       {children}
     </AppContext.Provider>
   );

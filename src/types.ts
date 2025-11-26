@@ -33,6 +33,7 @@ export interface AppState {
 
 export type AppAction =
   | { type: 'ADD_PERSON'; payload: string }
+  | { type: 'SET_PEOPLE'; payload: Array<{ id: string; name: string }> }
   | { type: 'REMOVE_PERSON'; payload: string }
   | { type: 'SET_MONTH'; payload: number }
   | { type: 'SET_YEAR'; payload: number }
@@ -45,7 +46,8 @@ export type AppAction =
   | { type: 'SET_HAS_UNSAVED_CHANGES'; payload: boolean }
   | { type: 'SET_CAN_GENERATE_SCHEDULE'; payload: boolean }
   | { type: 'LOAD_FROM_STORAGE' }
-  | { type: 'LOAD_SCHEDULE_FROM_STORAGE'; payload: { year: number; month: number } };
+  | { type: 'LOAD_SCHEDULE_FROM_STORAGE'; payload: { year: number; month: number } }
+  | { type: 'SET_SCHEDULE_FROM_DB'; payload: { calendar: any[]; lastPersonIndex: any } };
 
 export interface EditModalProps {
   day: number;

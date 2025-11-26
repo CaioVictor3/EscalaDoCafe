@@ -1,40 +1,88 @@
 import React, { useEffect } from 'react';
 import { AppProvider, useApp } from './AppContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import PersonForm from './PersonForm';
 import PersonList from './PersonList';
 import CalendarControls from './CalendarControls';
 import Calendar from './Calendar';
 import { useScheduleGenerator } from './useScheduleGenerator';
 import { usePDFExport } from './usePDFExport';
+import AuthScreen from './components/AuthScreen';
+import { ScheduleService } from './services/api';
 import './App.css';
 
 const AppContent: React.FC = () => {
   const { state, dispatch } = useApp();
+  const { user, loading, logout } = useAuth();
   const { generateSchedule } = useScheduleGenerator();
   const { exportToPDF } = usePDFExport();
 
-  // Carregar dados do localStorage na inicialização e ao mudar de mês/ano
+  // Carregar escala do banco de dados quando mudar mês/ano
   useEffect(() => {
-    dispatch({ type: 'LOAD_FROM_STORAGE' });
-    dispatch({
-      type: 'LOAD_SCHEDULE_FROM_STORAGE',
-      payload: { year: state.selectedYear, month: state.selectedMonth },
-    });
-  }, [state.selectedMonth, state.selectedYear, dispatch]);
+    if (user) {
+      dispatch({ type: 'LOAD_FROM_STORAGE' });
+      
+      // Carregar escala do banco
+      ScheduleService.get(state.selectedYear, state.selectedMonth + 1)
+        .then((data) => {
+          if (data.schedule_data) {
+            dispatch({
+              type: 'SET_SCHEDULE_FROM_DB',
+              payload: {
+                calendar: data.schedule_data,
+                lastPersonIndex: data.last_person_index || {},
+              },
+            });
+          } else {
+            dispatch({
+              type: 'SET_SCHEDULE_FROM_DB',
+              payload: {
+                calendar: [],
+                lastPersonIndex: {},
+              },
+            });
+          }
+        })
+        .catch((error) => {
+          console.error('Erro ao carregar escala:', error);
+        });
+    }
+  }, [state.selectedMonth, state.selectedYear, user]);
 
+  if (loading) {
+    return (
+      <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Carregando...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <AuthScreen />;
+  }
 
   return (
     <div className="container mt-5">
-      <h1 className="text-center mb-4 d-flex align-items-center justify-content-center gap-3">
-        <img 
-          src="/favicon.ico" 
-          alt="Ícone de Café" 
-          width="40" 
-          height="40"
-          style={{ imageRendering: 'auto' }}
-        />
-        Escala de Café
-      </h1>
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h1 className="text-center mb-0 d-flex align-items-center justify-content-center gap-3">
+          <img 
+            src="/favicon.ico" 
+            alt="Ícone de Café" 
+            width="40" 
+            height="40"
+            style={{ imageRendering: 'auto' }}
+          />
+          Escala de Café
+        </h1>
+        <div className="d-flex align-items-center gap-3">
+          <span className="text-muted">Olá, {user.name}</span>
+          <button onClick={logout} className="btn btn-outline-secondary btn-sm">
+            Sair
+          </button>
+        </div>
+      </div>
       
       <PersonForm />
       <PersonList />
@@ -68,9 +116,11 @@ const AppContent: React.FC = () => {
 
 function App() {
   return (
-    <AppProvider>
-      <AppContent />
-    </AppProvider>
+    <AuthProvider>
+      <AppProvider>
+        <AppContent />
+      </AppProvider>
+    </AuthProvider>
   );
 }
 
