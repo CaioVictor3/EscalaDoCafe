@@ -13,7 +13,14 @@ const getDatabaseUrl = () => {
   return url;
 };
 
-const sql = neon(getDatabaseUrl());
+// Inicializar sql de forma lazy para evitar erros no carregamento do módulo
+let sqlInstance: ReturnType<typeof neon> | null = null;
+const getSql = () => {
+  if (!sqlInstance) {
+    sqlInstance = neon(getDatabaseUrl());
+  }
+  return sqlInstance;
+};
 
 function getUserIdFromToken(event: any): string | null {
   try {
@@ -52,6 +59,8 @@ export const handler: Handler = async (event) => {
   }
 
   try {
+    const sql = getSql();
+    
     // GET - Listar pessoas do usuário
     if (event.httpMethod === 'GET') {
       const people = await sql`
@@ -125,11 +134,15 @@ export const handler: Handler = async (event) => {
       body: JSON.stringify({ error: 'Method not allowed' }),
     };
   } catch (error: any) {
-    console.error('Erro:', error);
+    console.error('Erro em people:', error);
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ error: 'Erro interno do servidor' }),
+      body: JSON.stringify({ 
+        error: 'Erro interno do servidor',
+        message: error.message || String(error),
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      }),
     };
   }
 };

@@ -13,7 +13,14 @@ const getDatabaseUrl = () => {
   return url;
 };
 
-const sql = neon(getDatabaseUrl());
+// Inicializar sql de forma lazy para evitar erros no carregamento do módulo
+let sqlInstance: ReturnType<typeof neon> | null = null;
+const getSql = () => {
+  if (!sqlInstance) {
+    sqlInstance = neon(getDatabaseUrl());
+  }
+  return sqlInstance;
+};
 
 function getUserIdFromToken(event: any): string | null {
   try {
@@ -52,6 +59,8 @@ export const handler: Handler = async (event) => {
   }
 
   try {
+    const sql = getSql();
+    
     // GET - Buscar escala
     if (event.httpMethod === 'GET') {
       const { year, month } = event.queryStringParameters || {};
@@ -145,12 +154,6 @@ export const handler: Handler = async (event) => {
           body: JSON.stringify({ success: true, id: result[0].id }),
         };
       }
-
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({ success: true, id: result[0].id }),
-      };
     }
 
     return {
@@ -159,11 +162,15 @@ export const handler: Handler = async (event) => {
       body: JSON.stringify({ error: 'Method not allowed' }),
     };
   } catch (error: any) {
-    console.error('Erro:', error);
+    console.error('Erro em schedules:', error);
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ error: 'Erro interno do servidor' }),
+      body: JSON.stringify({ 
+        error: 'Erro interno do servidor',
+        message: error.message || String(error),
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      }),
     };
   }
 };
