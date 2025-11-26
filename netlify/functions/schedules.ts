@@ -84,19 +84,56 @@ export const handler: Handler = async (event) => {
         };
       }
 
+      // Converter para JSON strings
       const scheduleDataJson = JSON.stringify(schedule_data);
       const lastPersonIndexJson = last_person_index ? JSON.stringify(last_person_index) : null;
 
-      const result = await sql`
-        INSERT INTO schedules (user_id, year, month, schedule_data, last_person_index)
-        VALUES (${userId}, ${year}, ${month}, ${scheduleDataJson}::jsonb, ${lastPersonIndexJson ? lastPersonIndexJson::jsonb : null})
-        ON CONFLICT (user_id, year, month)
-        DO UPDATE SET
-          schedule_data = EXCLUDED.schedule_data,
-          last_person_index = EXCLUDED.last_person_index,
-          updated_at = CURRENT_TIMESTAMP
-        RETURNING id
-      `;
+      // Usar função SQL helper para fazer o cast (evita problema com esbuild)
+      if (lastPersonIndexJson) {
+        const result = await sql`
+          INSERT INTO schedules (user_id, year, month, schedule_data, last_person_index)
+          VALUES (
+            ${userId}, 
+            ${year}, 
+            ${month}, 
+            text_to_jsonb(${scheduleDataJson}), 
+            text_to_jsonb(${lastPersonIndexJson})
+          )
+          ON CONFLICT (user_id, year, month)
+          DO UPDATE SET
+            schedule_data = EXCLUDED.schedule_data,
+            last_person_index = EXCLUDED.last_person_index,
+            updated_at = CURRENT_TIMESTAMP
+          RETURNING id
+        `;
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify({ success: true, id: result[0].id }),
+        };
+      } else {
+        const result = await sql`
+          INSERT INTO schedules (user_id, year, month, schedule_data, last_person_index)
+          VALUES (
+            ${userId}, 
+            ${year}, 
+            ${month}, 
+            text_to_jsonb(${scheduleDataJson}), 
+            NULL
+          )
+          ON CONFLICT (user_id, year, month)
+          DO UPDATE SET
+            schedule_data = EXCLUDED.schedule_data,
+            last_person_index = EXCLUDED.last_person_index,
+            updated_at = CURRENT_TIMESTAMP
+          RETURNING id
+        `;
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify({ success: true, id: result[0].id }),
+        };
+      }
 
       return {
         statusCode: 200,

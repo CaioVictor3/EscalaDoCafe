@@ -38,6 +38,14 @@ CREATE TABLE IF NOT EXISTS schedules (
   UNIQUE(user_id, year, month)
 );
 
+-- Função helper para converter texto para jsonb (evita problemas com esbuild)
+CREATE OR REPLACE FUNCTION text_to_jsonb(text_val TEXT)
+RETURNS JSONB AS $$
+BEGIN
+  RETURN text_val::jsonb;
+END;
+$$ LANGUAGE plpgsql;
+
 -- Índice para busca rápida de escalas por usuário
 CREATE INDEX IF NOT EXISTS idx_schedules_user_id ON schedules(user_id);
 CREATE INDEX IF NOT EXISTS idx_schedules_user_year_month ON schedules(user_id, year, month);
