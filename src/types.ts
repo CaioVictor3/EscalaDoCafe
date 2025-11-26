@@ -44,7 +44,8 @@ export type AppAction =
   | { type: 'SET_LAST_PERSON_INDEX'; payload: { month: number; person: string } }
   | { type: 'SET_HAS_UNSAVED_CHANGES'; payload: boolean }
   | { type: 'SET_CAN_GENERATE_SCHEDULE'; payload: boolean }
-  | { type: 'LOAD_FROM_STORAGE' };
+  | { type: 'LOAD_FROM_STORAGE' }
+  | { type: 'LOAD_SCHEDULE_FROM_STORAGE'; payload: { year: number; month: number } };
 
 export interface EditModalProps {
   day: number;

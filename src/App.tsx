@@ -36,10 +36,6 @@ const AppContent: React.FC = () => {
         Escala de Café
       </h1>
       
-      <div className="text-center mb-4">
-        <button className="btn btn-secondary">teste 1</button>
-      </div>
-      
       <PersonForm />
       <PersonList />
       <CalendarControls />
