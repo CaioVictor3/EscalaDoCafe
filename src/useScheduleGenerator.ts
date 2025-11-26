@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useApp } from './AppContext';
-import type { CalendarDay } from './types';
+import type { CalendarDay, Holiday } from './types';
 import { HolidayService } from './services';
 import { shuffleArray, formatDate } from './utils';
 import { STORAGE_KEYS } from './constants';
@@ -32,7 +32,7 @@ export const useScheduleGenerator = () => {
     }
 
     // Buscar feriados
-    let holidays = [];
+    let holidays: Holiday[] = [];
     try {
       holidays = await HolidayService.fetchHolidays(state.selectedYear);
       dispatch({ type: 'SET_HOLIDAYS', payload: holidays });
