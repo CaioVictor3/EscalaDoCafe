@@ -2,7 +2,18 @@ import { Handler } from '@netlify/functions';
 import { neon } from '@neondatabase/serverless';
 import * as jwt from 'jsonwebtoken';
 
-const sql = neon(process.env.NETLIFY_DATABASE_URL || process.env.DATABASE_URL || '');
+// Obter URL do banco de dados - Netlify DB usa NETLIFY_DATABASE_URL
+const getDatabaseUrl = () => {
+  const url = process.env.NETLIFY_DATABASE_URL || process.env.DATABASE_URL;
+  if (!url) {
+    throw new Error(
+      'NETLIFY_DATABASE_URL não configurada. Execute "npx netlify db init" ou configure a variável de ambiente DATABASE_URL no Netlify.'
+    );
+  }
+  return url;
+};
+
+const sql = neon(getDatabaseUrl());
 
 function getUserIdFromToken(event: any): string | null {
   try {
