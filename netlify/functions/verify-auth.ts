@@ -13,7 +13,14 @@ const getDatabaseUrl = () => {
   return url;
 };
 
-const sql = neon(getDatabaseUrl());
+// Inicializar sql de forma lazy para evitar erros no carregamento do módulo
+let sqlInstance: ReturnType<typeof neon> | null = null;
+const getSql = () => {
+  if (!sqlInstance) {
+    sqlInstance = neon(getDatabaseUrl());
+  }
+  return sqlInstance;
+};
 
 export const handler: Handler = async (event) => {
   // Permitir CORS
@@ -54,6 +61,7 @@ export const handler: Handler = async (event) => {
     const decoded = jwt.verify(token, secret) as { userId: string; name: string };
 
     // Buscar usuário
+    const sql = getSql();
     const users = await sql`
       SELECT id, name FROM users WHERE id = ${decoded.userId}
     `;

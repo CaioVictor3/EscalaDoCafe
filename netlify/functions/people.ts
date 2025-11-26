@@ -63,9 +63,11 @@ export const handler: Handler = async (event) => {
     
     // GET - Listar pessoas do usuário
     if (event.httpMethod === 'GET') {
+      console.log('GET people - userId:', userId);
       const people = await sql`
         SELECT id, name FROM people WHERE user_id = ${userId} ORDER BY name
       `;
+      console.log('GET people - resultado:', people.length, 'pessoas');
       return {
         statusCode: 200,
         headers,
@@ -76,6 +78,7 @@ export const handler: Handler = async (event) => {
     // POST - Adicionar pessoa
     if (event.httpMethod === 'POST') {
       const { name } = JSON.parse(event.body || '{}');
+      console.log('POST people - userId:', userId, 'name:', name);
       if (!name) {
         return {
           statusCode: 400,
@@ -84,26 +87,32 @@ export const handler: Handler = async (event) => {
         };
       }
 
-      const result = await sql`
-        INSERT INTO people (user_id, name)
-        VALUES (${userId}, ${name})
-        ON CONFLICT (user_id, name) DO NOTHING
-        RETURNING id, name
-      `;
+      try {
+        const result = await sql`
+          INSERT INTO people (user_id, name)
+          VALUES (${userId}, ${name})
+          ON CONFLICT (user_id, name) DO NOTHING
+          RETURNING id, name
+        `;
+        console.log('POST people - resultado:', result);
 
-      if (result.length === 0) {
+        if (result.length === 0) {
+          return {
+            statusCode: 409,
+            headers,
+            body: JSON.stringify({ error: 'Pessoa já existe' }),
+          };
+        }
+
         return {
-          statusCode: 409,
+          statusCode: 201,
           headers,
-          body: JSON.stringify({ error: 'Pessoa já existe' }),
+          body: JSON.stringify(result[0]),
         };
+      } catch (dbError: any) {
+        console.error('Erro ao inserir pessoa no banco:', dbError);
+        throw dbError;
       }
-
-      return {
-        statusCode: 201,
-        headers,
-        body: JSON.stringify(result[0]),
-      };
     }
 
     // DELETE - Remover pessoa

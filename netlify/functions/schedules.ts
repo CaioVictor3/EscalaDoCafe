@@ -64,6 +64,7 @@ export const handler: Handler = async (event) => {
     // GET - Buscar escala
     if (event.httpMethod === 'GET') {
       const { year, month } = event.queryStringParameters || {};
+      console.log('GET schedules - userId:', userId, 'year:', year, 'month:', month);
       if (!year || !month) {
         return {
           statusCode: 400,
@@ -72,24 +73,30 @@ export const handler: Handler = async (event) => {
         };
       }
 
-      const schedules = await sql`
-        SELECT schedule_data, last_person_index FROM schedules
-        WHERE user_id = ${userId} AND year = ${parseInt(year)} AND month = ${parseInt(month)}
-      `;
+      try {
+        const schedules = await sql`
+          SELECT schedule_data, last_person_index FROM schedules
+          WHERE user_id = ${userId} AND year = ${parseInt(year)} AND month = ${parseInt(month)}
+        `;
+        console.log('GET schedules - resultado:', schedules.length, 'escalas');
 
-      if (schedules.length === 0) {
+        if (schedules.length === 0) {
+          return {
+            statusCode: 200,
+            headers,
+            body: JSON.stringify({ schedule_data: null, last_person_index: null }),
+          };
+        }
+
         return {
           statusCode: 200,
           headers,
-          body: JSON.stringify({ schedule_data: null, last_person_index: null }),
+          body: JSON.stringify(schedules[0]),
         };
+      } catch (dbError: any) {
+        console.error('Erro ao buscar escala no banco:', dbError);
+        throw dbError;
       }
-
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify(schedules[0]),
-      };
     }
 
     // POST/PUT - Salvar escala
@@ -104,11 +111,12 @@ export const handler: Handler = async (event) => {
         };
       }
 
-      // Converter para JSON strings
+      // Converter para JSON strings e usar função SQL para fazer o cast
       const scheduleDataJson = JSON.stringify(schedule_data);
       const lastPersonIndexJson = last_person_index ? JSON.stringify(last_person_index) : null;
 
-      // Usar função SQL helper para fazer o cast (evita problema com esbuild)
+      // Usar função SQL nativa do PostgreSQL para converter texto para jsonb
+      // Isso evita problemas com esbuild interpretando ::jsonb
       if (lastPersonIndexJson) {
         const result = await sql`
           INSERT INTO schedules (user_id, year, month, schedule_data, last_person_index)
@@ -116,8 +124,8 @@ export const handler: Handler = async (event) => {
             ${userId}, 
             ${year}, 
             ${month}, 
-            text_to_jsonb(${scheduleDataJson}), 
-            text_to_jsonb(${lastPersonIndexJson})
+            to_jsonb(${scheduleDataJson}::text), 
+            to_jsonb(${lastPersonIndexJson}::text)
           )
           ON CONFLICT (user_id, year, month)
           DO UPDATE SET
@@ -138,7 +146,7 @@ export const handler: Handler = async (event) => {
             ${userId}, 
             ${year}, 
             ${month}, 
-            text_to_jsonb(${scheduleDataJson}), 
+            to_jsonb(${scheduleDataJson}::text), 
             NULL
           )
           ON CONFLICT (user_id, year, month)
