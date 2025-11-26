@@ -1,9 +1,9 @@
 import { Handler } from '@netlify/functions';
-import { neon } from '@netlify/neon';
+import { neon } from '@neondatabase/serverless';
 import * as bcrypt from 'bcryptjs';
 import * as jwt from 'jsonwebtoken';
 
-const sql = neon(process.env.NETLIFY_DATABASE_URL || '');
+const sql = neon(process.env.NETLIFY_DATABASE_URL || process.env.DATABASE_URL || '');
 
 export const handler: Handler = async (event) => {
   // Permitir CORS
