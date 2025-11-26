@@ -48,9 +48,6 @@ export const useScheduleGenerator = () => {
     // Preparar lista de pessoas conforme modo selecionado
     let assignmentList = state.people.map(p => p.name);
     let personIndex = 0;
-    const periodStr = `${state.selectedYear}-${String(state.selectedMonth + 1).padStart(2, '0')}`;
-    const monthKey = STORAGE_KEYS.ALPHA_SCHEDULE(periodStr);
-    const monthPeopleKey = STORAGE_KEYS.ALPHA_SCHEDULE_PEOPLE(periodStr);
 
     if (state.alphaContinuous) {
       // Ordena alfabeticamente
