@@ -83,22 +83,36 @@ const Calendar: React.FC = () => {
         const afternoonPerson = calendarDay?.afternoonPerson || '';
         
         cellContent = (
-          <div className="d-flex flex-column align-items-center h-100 p-2">
-            <strong>{day}</strong>
-            <span className="morning-person small flex-grow-1" style={{
-              wordBreak: 'break-word',
-              overflowWrap: 'anywhere',
-              textAlign: 'center'
+          <div className="d-flex flex-column align-items-center justify-content-center h-100 p-2" style={{
+            textAlign: 'center'
+          }}>
+            <strong style={{ marginBottom: '8px' }}>{day}</strong>
+            <div style={{
+              width: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexGrow: 1,
+              gap: '4px'
             }}>
-              Manhã: {morningPerson}
-            </span>
-            <span className="afternoon-person small flex-grow-1" style={{
-              wordBreak: 'break-word',
-              overflowWrap: 'anywhere',
-              textAlign: 'center'
-            }}>
-              Tarde: {afternoonPerson}
-            </span>
+              <span className="morning-person small" style={{
+                wordBreak: 'break-word',
+                overflowWrap: 'anywhere',
+                textAlign: 'center',
+                width: '100%'
+              }}>
+                Manhã: {morningPerson}
+              </span>
+              <span className="afternoon-person small" style={{
+                wordBreak: 'break-word',
+                overflowWrap: 'anywhere',
+                textAlign: 'center',
+                width: '100%'
+              }}>
+                Tarde: {afternoonPerson}
+              </span>
+            </div>
             <button
               className="btn btn-sm btn-outline-primary mt-auto edit-button-class d-print-none"
               onClick={() => handleEditDay(day, morningPerson, afternoonPerson)}

@@ -31,14 +31,14 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         people: [...state.people, newPerson],
-        hasUnsavedChanges: true,
+        hasUnsavedChanges: false,
       };
 
     case 'REMOVE_PERSON':
       return {
         ...state,
         people: state.people.filter(person => person.id !== action.payload),
-        hasUnsavedChanges: true,
+        hasUnsavedChanges: false,
       };
 
     case 'SET_MONTH':
@@ -69,7 +69,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         calendar: action.payload,
-        hasUnsavedChanges: true,
+        hasUnsavedChanges: false,
         canGenerateSchedule: false,
       };
 

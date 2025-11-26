@@ -48,7 +48,7 @@ const AppContent: React.FC = () => {
         <button onClick={generateSchedule} className="btn btn-success">
           Criar Escala
         </button>
-        <button onClick={exportToPDF} className="btn btn-primary btn-export" disabled={state.hasUnsavedChanges || state.calendar.length === 0}>
+        <button onClick={exportToPDF} className="btn btn-primary btn-export">
           Exportar para PDF
         </button>
       </div>
@@ -65,7 +65,7 @@ const AppContent: React.FC = () => {
 
       <Calendar />
       
-      <footer className="text-center mt-4 mb-4">Feito por Caio Victor</footer>
+      <footer className="text-center mt-4 mb-4">Feito por Caio Victor ©</footer>
     </div>
   );
 };

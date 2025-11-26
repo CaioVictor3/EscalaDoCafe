@@ -104,7 +104,16 @@ export const useScheduleGenerator = () => {
 
     dispatch({ type: 'SET_CALENDAR', payload: calendar });
 
-    // Se modo contínuo alfabético estiver ativo, salvar informações
+    // Salvar automaticamente no localStorage sempre que a escala for gerada
+    try {
+      // Salva a escala do mês e as pessoas usadas
+      localStorage.setItem(monthKey, JSON.stringify(calendar));
+      localStorage.setItem(monthPeopleKey, JSON.stringify(assignmentList));
+    } catch (e) {
+      console.warn('Falha ao salvar informações no localStorage:', e);
+    }
+
+    // Se modo contínuo alfabético estiver ativo, atualizar índice
     if (state.alphaContinuous) {
       // Encontra a última pessoa escalada no mês
       let lastAssignedPerson = '';
@@ -119,14 +128,6 @@ export const useScheduleGenerator = () => {
           type: 'SET_LAST_PERSON_INDEX',
           payload: { month: state.selectedMonth + 1, person: lastAssignedPerson },
         });
-      }
-
-      try {
-        // Salva a escala do mês e as pessoas usadas
-        localStorage.setItem(monthKey, JSON.stringify(calendar));
-        localStorage.setItem(monthPeopleKey, JSON.stringify(assignmentList));
-      } catch (e) {
-        console.warn('Falha ao salvar informações no localStorage:', e);
       }
 
       dispatch({ type: 'SET_MESSAGES', payload: ['Escala em ordem alfabética gerada com sucesso!'] });
